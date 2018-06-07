@@ -22,9 +22,11 @@ class UCXData(bpy.types.PropertyGroup):
 
 
 ################################################################
-# Transfer an action from one skeletonn to another. This is
-# done by renaming the curves in the action from old bone names
-# to their counterparts in the active skeleton.
+# Renames the selected meshes according to Unreal Engine 4
+# naming conventions for collision shapes, which are
+# UCX_[objectname]_XX, where XX denotes a continuous sequence
+# of numbers and [objectname] has to be the name of one mesh
+# included in the exported static mesh FBX file.
 #################################################################
 class ToUCX(bpy.types.Operator):
     """Rename selected meshes to be compatible with UE4's collision naming conventions"""
@@ -66,7 +68,7 @@ class ToUCX(bpy.types.Operator):
             self.report({'WARNING'}, "No object with base name found in scene.")
 
         # determine the number of digits for the numerical suffix
-        num_digits = 1 + int(math.log10(data.start_idx + len(context.selected_objects)))
+        num_digits = max(1 + int(math.log10(data.start_idx + len(context.selected_objects))), 2)
         fmt = "%0" + str(num_digits) + "d"
 
         for obj in context.selected_objects:
