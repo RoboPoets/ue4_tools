@@ -14,7 +14,7 @@ bl_info = {
     "category": "Object"
 }
 
-import bpy
+import bpy, math
 
 class UCXData(bpy.types.PropertyGroup):
     base_name = bpy.props.StringProperty(name="Base Name")
@@ -65,13 +65,16 @@ class ToUCX(bpy.types.Operator):
         if not has_base_name:
             self.report({'WARNING'}, "No object with base name found in scene.")
 
+        # determine the number of digits for the numerical suffix
+        num_digits = 1 + int(math.log10(data.start_idx + len(context.selected_objects)))
+        fmt = "%0" + str(num_digits) + "d"
+
         for obj in context.selected_objects:
             if obj.name == data.base_name:
                 self.report({'WARNING'}, "Object with base name is selected and will be renamed.")
-            obj.name = "UCX_" + data.base_name + "_" + "%02d" % data.start_idx
+            obj.name = "UCX_" + data.base_name + "_" + fmt % data.start_idx
             data.start_idx += 1
 
-        print(data.base_name, data.start_idx)
         return {'FINISHED'}
 
 
