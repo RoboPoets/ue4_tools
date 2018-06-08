@@ -106,18 +106,51 @@ class SelectUCXCandidates(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class SelectUCX(bpy.types.Operator):
+    """Select visible collision shapes, either all or only those matching an optional base name"""
+    bl_idname = "object.ue4t_select_ucx"
+    bl_label = "UCX: Select Collision Shapes"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    base_name = bpy.props.StringProperty(name="Base Name (Optional)")
+
+    @classmethod
+    def poll(cls, context):
+        return context.object is None or context.object.mode == 'OBJECT'
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.row().prop(self, "base_name")
+
+    def execute(self, context):
+        for obj in context.selected_objects:
+            obj.select = False
+
+        search_string = "UCX_" + self.base_name
+        for obj in context.selectable_objects:
+            if obj.type != 'MESH':
+                continue
+            if obj.name.startswith(search_string):
+                obj.select = True
+
+        return {'FINISHED'}
+
+
 #################### boring init stuff ############################
 
 def register():
-    bpy.utils.register_class(UCXData)
     bpy.utils.register_class(ToUCX)
     bpy.utils.register_class(SelectUCXCandidates)
+    bpy.utils.register_class(SelectUCX)
 
 
 def unregister():
-    bpy.utils.unregister_class(UCXData)
     bpy.utils.unregister_class(ToUCX)
     bpy.utils.unregister_class(SelectUCXCandidates)
+    bpy.utils.unregister_class(SelectUCX)
 
 
 if __name__ == "__main__":
