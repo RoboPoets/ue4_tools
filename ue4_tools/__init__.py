@@ -26,7 +26,7 @@ import bpy, math
 class ToUCX(bpy.types.Operator):
     """Rename selected meshes to be compatible with UE4's collision naming conventions"""
     bl_idname = "object.ue4t_mesh_to_ucx"
-    bl_label = "UE4 Tools: To UCX"
+    bl_label = "UCX: To UCX"
     bl_options = {'REGISTER', 'UNDO'}
 
     base_name = bpy.props.StringProperty(name="Base Name")
@@ -83,7 +83,7 @@ class ToUCX(bpy.types.Operator):
 class SelectUCXCandidates(bpy.types.Operator):
     """Select all meshes that are intended to be used as collision shapes"""
     bl_idname = "object.ue4t_select_ucx_candidates"
-    bl_label = "UE4 Tools: Select Possible Collision Shapes"
+    bl_label = "UCX: Select Possible Collision Shapes"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
