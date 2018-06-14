@@ -40,13 +40,10 @@ class ToUCX(bpy.types.Operator):
         return len(context.selected_objects) != 0
 
     def invoke(self, context, event):
-        selection = context.selected_objects
-
-        for o in selection:
+        for o in context.selected_objects:
             if o.type != 'MESH':
                 self.report({'ERROR'}, "Only meshes can be collision shapes.")
                 return {'CANCELLED'}
-
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -56,7 +53,6 @@ class ToUCX(bpy.types.Operator):
 
     def execute(self, context):
         has_base_name = False
-
         for obj in context.scene.objects:
             if obj.name == self.base_name:
                 has_base_name = True
@@ -106,6 +102,9 @@ class SelectUCXCandidates(bpy.types.Operator):
         return {'FINISHED'}
 
 
+################################################################
+#
+#################################################################
 class SelectUCX(bpy.types.Operator):
     """Select visible collision shapes, either all or only those matching an optional base name"""
     bl_idname = "object.ue4t_select_ucx"
@@ -139,18 +138,95 @@ class SelectUCX(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class Bake(bpy.types.Operator):
+    """Bake Maps used for edge wear, dust accumulation & cavities"""
+    bl_idname = "object.mtrlz_bake"
+    bl_label = "Materializer: Bake"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    mat_id = "M_Bake"
+    _node_ids = ['AO', 'WSN', 'Edge']
+
+    _meshes = []
+    _idx = 0
+    _state = 0
+    working = False
+    timer = None
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        self._meshes = []
+        for obj in context.selected_objects:
+            if obj.type != 'MESH':
+                obj.select = False
+                continue
+            for slot in obj.material_slots:
+                slot.material = bpy.data.materials[self.mat_id]
+            obj.data.uv_textures.active_index = 1
+            self._meshes.append(obj)
+
+        self._idx = 0
+        self._state = 0
+        self.working = False
+        self.timer = context.window_manager.event_timer_add(1.0, context.window)
+        context.window_manager.modal_handler_add(self)
+
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type == 'TIMER' and not self.working:
+            self.working = True
+            bpy.ops.object.select_all(action='DESELECT')
+            self._meshes[self._idx].select = True
+            nodes = bpy.data.materials[self.mat_id].node_tree.nodes
+            node = nodes[self._node_ids[self._state]]
+            node.select = True
+            nodes.active = node
+
+            if self._state == 0:
+                bpy.ops.object.bake(type = 'AO', margin = 4, use_clear = (self._idx == 0))
+            elif self._state == 1:
+                bpy.ops.object.bake(type = 'NORMAL', margin = 4, normal_space = 'OBJECT', use_clear = (self._idx == 0))
+            elif self._state == 2:
+                bpy.ops.object.bake(type='DIFFUSE', margin=4, pass_filter={'COLOR'}, use_clear=(self._idx == 0))
+
+            self._idx += 1
+            if self._idx == len(self._meshes):
+                self._idx = 0
+                self._state += 1
+
+            self.working = False
+            bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+        if self._state == 3:
+            return self.cancel(context)
+
+        return {'PASS_THROUGH'}
+
+    def cancel(self, context):
+        context.window_manager.event_timer_remove(self.timer)
+        self.timer = None
+        for obj in self._meshes:
+            obj.select = True
+        return {'CANCELLED'}
+
+
 #################### boring init stuff ############################
 
 def register():
     bpy.utils.register_class(ToUCX)
     bpy.utils.register_class(SelectUCXCandidates)
     bpy.utils.register_class(SelectUCX)
+    bpy.utils.register_class(Bake)
 
 
 def unregister():
     bpy.utils.unregister_class(ToUCX)
     bpy.utils.unregister_class(SelectUCXCandidates)
     bpy.utils.unregister_class(SelectUCX)
+    bpy.utils.unregister_class(Bake)
 
 
 if __name__ == "__main__":
